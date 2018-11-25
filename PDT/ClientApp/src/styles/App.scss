@@ -1,0 +1,46 @@
+body {
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
+  background-color: lightgray;
+}
+
+header {
+  background-color: dodgerblue;
+  padding: 10px;
+  color: white;
+
+  ul {
+    margin: 0;
+    padding: 0;
+
+    li {
+      list-style: none;
+
+      a {
+        color: black;
+      }
+    }
+  }
+}
+
+main {
+  padding: 10px;
+
+  .leaflet-container {
+    height: 800px;
+    width: 80%;
+    margin: 0 auto;
+  }
+}
+
+footer {
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    left: 0;
+    background-color: dodgerblue;
+    padding: 10px;
+    color: white;
+    box-sizing: border-box;
+}

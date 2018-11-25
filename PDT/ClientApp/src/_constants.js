@@ -1,0 +1,1 @@
+export const RECEIVE_LOGIN_USER = "RECEIVE_LOGIN_USER";

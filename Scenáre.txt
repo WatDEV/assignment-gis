@@ -1,0 +1,7 @@
+Scenáre:
+Bary a puby v okolí alebo v mestských častiach
+Parky v okolí alebo v mestských častiach ktoré obsahujú lavičky
+Najbližšie obchody s alkoholom v okolí parkov
+Hotely v okolí bodov záujmu predtým vybraných (parky,bary) ak sa vybrala možnosť prespávanie v meste
+
+aspoň 3 rôzne scenáre s 3 rôznimi operáciami. S nerovnakými tabulkami
