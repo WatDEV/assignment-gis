@@ -19,8 +19,7 @@ namespace PDT.Services
 		}
 		public IEnumerable<string> GetCityParts()
 		{
-			return db.PlanetOsmPolygon.Where(p => p.Name != null && !p.Name.Equals("Ahoj")  && p.Boundary == "administrative")
-				.Where(x => !string.IsNullOrEmpty(x.Name))
+			return db.PlanetOsmPolygon.Where(p => string.IsNullOrEmpty(p.Name) && !p.Name.Equals("Ahoj")  && p.Boundary == "administrative")
 				.Select(x => x.Name)
 				.Distinct()
 				.ToList();
@@ -206,7 +205,7 @@ namespace PDT.Services
 		public IEnumerable<ShopDto> GetNearbyShops(int parkId, double radius)
 		{
 			var toReturn = (from park in db.PlanetOsmPolygon where park.Id == parkId
-							from shop in db.PlanetOsmPoint where shop.Shop == "alcohol" || shop.Shop == "wine" || shop.Shop == "supermarket" || shop.Shop == "tobacco" || shop.Shop == "coffee"
+							from shop in db.PlanetOsmPoint where shop.Shop == "alcohol" || shop.Shop == "wine" || shop.Shop == "supermarket" || shop.Shop == "tobacco" || shop.Shop == "coffe"
 							where shop.Way.Distance(park.Way) < radius
 							select new ShopDto
 							{
