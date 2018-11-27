@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace PDT.Services
+namespace PDT.Utils
 {
 	public static class GeoJsonParser
 	{
@@ -34,6 +34,9 @@ namespace PDT.Services
 		}
 		public static Feature ParseParkToFeature(ParkDto park)
 		{
+			if (park.Location[0][0] != park.Location.Last()[0] && park.Location[0][1] != park.Location.Last()[1])
+				park.Location.Add(park.Location[0]);
+
 			var geometry = new Polygon(new List<IEnumerable<IEnumerable<double>>> { park.Location });
 			var properties = new Dictionary<string, dynamic>
 					{

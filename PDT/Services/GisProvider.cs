@@ -19,7 +19,7 @@ namespace PDT.Services
 		}
 		public IEnumerable<string> GetCityParts()
 		{
-			return db.PlanetOsmPolygon.Where(p => p.Boundary == "administrative")
+			return db.PlanetOsmPolygon.Where(p => p.Name != null && !p.Name.Equals("Ahoj")  && p.Boundary == "administrative")
 				.Where(x => !string.IsNullOrEmpty(x.Name))
 				.Select(x => x.Name)
 				.Distinct()
@@ -36,8 +36,8 @@ namespace PDT.Services
 					{
 						Name = bar.Name,
 						Id = Convert.ToInt32(bar.Id),
-						Lat = TransformationUtils.GetLattitude(bar.Way.Y),
-						Lon = TransformationUtils.GetLongtitude(bar.Way.X),
+						Lon = TransformationUtils.ParseLongtitudeToNormalFormat(bar.Way.X),
+						Lat = TransformationUtils.ParseLattitudeToNormalFormat(bar.Way.Y),
 						BarType = bar.Amenity
 					}).ToList();
 		}
@@ -51,8 +51,8 @@ namespace PDT.Services
 						{
 							Name = bar.Name,
 							Id = Convert.ToInt32(bar.Id),
-							Lat = TransformationUtils.GetLattitude(bar.Way.Y),
-							Lon = TransformationUtils.GetLongtitude(bar.Way.X),
+							Lon = TransformationUtils.ParseLongtitudeToNormalFormat(bar.Way.X),
+							Lat = TransformationUtils.ParseLattitudeToNormalFormat(bar.Way.Y),
 							BarType = bar.Amenity
 						}).ToList();
 			}
@@ -64,8 +64,8 @@ namespace PDT.Services
 					{
 						Name = bar.Name,
 						Id = Convert.ToInt32(bar.Id),
-						Lat = TransformationUtils.GetLattitude(bar.Way.Y),
-						Lon = TransformationUtils.GetLongtitude(bar.Way.X),
+						Lon = TransformationUtils.ParseLongtitudeToNormalFormat(bar.Way.X),
+						Lat = TransformationUtils.ParseLattitudeToNormalFormat(bar.Way.Y),
 						BarType = bar.Amenity
 					}).ToList();
 		}
@@ -74,69 +74,146 @@ namespace PDT.Services
 		{
 			var centerPoint = GetPoint(centerLon, centerLat);
 
-			var benches = db.PlanetOsmPoint.Where(x => x.Amenity == "bench").Select(x => x.Way).ToList();
+			//return (from park in db.PlanetOsmPolygon where park.Leisure == "park" && park.Way.Distance(centerPoint) < radius
+			var parksWithBenches = (from park in db.PlanetOsmPolygon where park.Leisure == "park" && park.Way.Distance(centerPoint) < radius
+									from bench in db.PlanetOsmPoint where bench.Amenity == "bench"
+									where park.Way.Contains(bench.Way)
+									select new ParkDto
+									{
+										Name = park.Name,
+										Id = Convert.ToInt32(park.Id),
+										Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+										{
+												TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+												TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+										}).ToList(),
+										HasBenches = true
+									}).GroupBy(x => x.Id).Select(x => x.FirstOrDefault()).ToList();
 
-			return (from park in db.PlanetOsmPolygon where park.Leisure == "park" && park.Way.Distance(centerPoint) < radius
-					select new ParkDto
-					{
-						Name = park.Name,
-						Id = Convert.ToInt32(park.Id),
-						Location = park.Way.Boundary.Coordinates.Select(y => new double[]
-						{
-							TransformationUtils.GetLongtitude(y.X),
-							TransformationUtils.GetLattitude(y.Y)
-						}).ToList(),
-						HasBenches = benches.FirstOrDefault(b => park.Way.Contains(b)) != null
-					}).ToList();
-		}
-		public IEnumerable<ParkDto> GetParks(string[] cityParts)
-		{
-			var benches = db.PlanetOsmPoint.Where(x => x.Amenity == "bench").Select(x => x.Way).ToList();
-
-			if (cityParts == null || cityParts.Length == 0)
-			{
-				return (from park in db.PlanetOsmPolygon where park.Leisure == "park"
-						select new ParkDto
-						{
-							Name = park.Name,
-							Id = Convert.ToInt32(park.Id),
-							Location = park.Way.Boundary.Coordinates.Select(y => new double[]
-							{
-							TransformationUtils.GetLongtitude(y.X),
-							TransformationUtils.GetLattitude(y.Y)
-							}).ToList(),
-							HasBenches = benches.FirstOrDefault(b => park.Way.Contains(b)) != null
-						}).ToList();
-			}
-
-			var toReturn = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
-							from cityPart in db.PlanetOsmPolygon where cityParts.Contains(cityPart.Name)
-							where park.Way.Within(cityPart.Way)
+			var allParks = (from park in db.PlanetOsmPolygon where park.Leisure == "park" && park.Way.Distance(centerPoint) < radius
 							select new ParkDto
 							{
 								Name = park.Name,
 								Id = Convert.ToInt32(park.Id),
 								Location = park.Way.Boundary.Coordinates.Select(y => new double[]
 								{
-									TransformationUtils.GetLongtitude(y.X),
-									TransformationUtils.GetLattitude(y.Y)
+									TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+									TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
 								}).ToList(),
-								HasBenches = benches.FirstOrDefault(b => park.Way.Contains(b)) != null
+								HasBenches = false
 							}).ToList();
+
+			var toReturn = parksWithBenches;
+			foreach (var p in allParks)
+			{
+				if (toReturn.FirstOrDefault(x => x.Id == p.Id) == null)
+				{
+					toReturn.Add(p);
+				}
+			}
+			return toReturn;
+		}
+		public IEnumerable<ParkDto> GetParks(string[] cityParts)
+		{
+			var parksWithBenches = new List<ParkDto>();
+			var allParks = new List<ParkDto>();
+			var toReturn = new List<ParkDto>();
+
+			if (cityParts == null || cityParts.Length == 0)
+			{
+				parksWithBenches = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
+									from bench in db.PlanetOsmPoint where bench.Amenity == "bench"
+									where park.Way.Contains(bench.Way)
+									select new ParkDto
+									{
+										Name = park.Name,
+										Id = Convert.ToInt32(park.Id),
+										Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+										{
+												TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+												TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+										}).ToList(),
+										HasBenches = true
+									}).GroupBy(x => x.Id).Select(x => x.FirstOrDefault()).ToList();
+
+				allParks = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
+							select new ParkDto
+							{
+								Name = park.Name,
+								Id = Convert.ToInt32(park.Id),
+								Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+								{
+									TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+									TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+								}).ToList(),
+								HasBenches = false
+							}).ToList();
+
+				toReturn = parksWithBenches;
+				foreach (var p in allParks)
+				{
+					if (toReturn.FirstOrDefault(x => x.Id == p.Id) == null)
+					{
+						toReturn.Add(p);
+					}
+				}
+				return toReturn;
+
+			}
+			parksWithBenches = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
+								from cityPart in db.PlanetOsmPolygon where cityParts.Contains(cityPart.Name)
+								from bench in db.PlanetOsmPoint where bench.Amenity == "bench"
+								where park.Way.Within(cityPart.Way)
+								where park.Way.Contains(bench.Way)
+								select new ParkDto
+								{
+									Name = park.Name,
+									Id = Convert.ToInt32(park.Id),
+									Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+									{
+												TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+												TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+									}).ToList(),
+									HasBenches = true
+								}).GroupBy(x => x.Id).Select(x => x.FirstOrDefault()).ToList();
+
+			allParks = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
+						from cityPart in db.PlanetOsmPolygon where cityParts.Contains(cityPart.Name)
+						where park.Way.Within(cityPart.Way)
+						select new ParkDto
+						{
+							Name = park.Name,
+							Id = Convert.ToInt32(park.Id),
+							Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+							{
+									TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+									TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+							}).ToList(),
+							HasBenches = false
+						}).ToList();
+
+			toReturn = parksWithBenches;
+			foreach (var p in allParks)
+			{
+				if (toReturn.FirstOrDefault(x => x.Id == p.Id) == null)
+				{
+					toReturn.Add(p);
+				}
+			}
 			return toReturn;
 		}
 
 		public IEnumerable<ShopDto> GetNearbyShops(int parkId, double radius)
 		{
 			var toReturn = (from park in db.PlanetOsmPolygon where park.Id == parkId
-							from shop in db.PlanetOsmPoint where shop.Shop == "alcohol" || shop.Shop == "wine" || shop.Shop == "supermarket" || shop.Shop == "tobacco"
+							from shop in db.PlanetOsmPoint where shop.Shop == "alcohol" || shop.Shop == "wine" || shop.Shop == "supermarket" || shop.Shop == "tobacco" || shop.Shop == "coffee"
 							where shop.Way.Distance(park.Way) < radius
 							select new ShopDto
 							{
 								Name = shop.Name,
 								Id = Convert.ToInt32(shop.Id),
-								Lat = TransformationUtils.GetLattitude(shop.Way.Y),
-								Lon = TransformationUtils.GetLongtitude(shop.Way.X),
+								Lon = TransformationUtils.ParseLongtitudeToNormalFormat(shop.Way.X),
+								Lat = TransformationUtils.ParseLattitudeToNormalFormat(shop.Way.Y),
 								ShopType = shop.Shop
 							}).ToList();
 			return toReturn;
@@ -178,8 +255,8 @@ namespace PDT.Services
 							{
 								Name = bar.Name,
 								Id = Convert.ToInt32(bar.Id),
-								Lat = TransformationUtils.GetLattitude(bar.Way.Y),
-								Lon = TransformationUtils.GetLongtitude(bar.Way.X),
+								Lon = TransformationUtils.ParseLongtitudeToNormalFormat(bar.Way.X),
+								Lat = TransformationUtils.ParseLattitudeToNormalFormat(bar.Way.Y),
 								BarType = bar.Amenity
 							}).ToList();
 			return toReturn;
@@ -195,8 +272,8 @@ namespace PDT.Services
 								Id = Convert.ToInt32(street.Id),
 								Location = street.Way.Coordinates.Select(y => new double[]
 								{
-									TransformationUtils.GetLongtitude(y.X),
-									TransformationUtils.GetLattitude(y.Y)
+									TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+									TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
 								}).ToList()
 							}).ToList();
 			return toReturn;

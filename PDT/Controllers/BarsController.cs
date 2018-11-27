@@ -1,10 +1,7 @@
 using GeoJSON.Net.Feature;
-using GeoJSON.Net.Geometry;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using PDT.DTOs;
 using PDT.Services;
-using System;
+using PDT.Utils;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,12 +15,12 @@ namespace PDT.Controllers
 		public BarsController(IGisProvider gisProvider)
 		{
 			gis = gisProvider;
-		}		
+		}
 
 		[HttpGet("[action]")]
 		public ActionResult<IEnumerable<FeatureCollection>> GetBars(double centerLat, double centerLon, double radius)
 		{
-			return Ok(new FeatureCollection(gis.GetBars(centerLat, centerLon, radius).Select(bar => GeoJsonParser.ParseBarToFeature(bar)).ToList()));;
+			return Ok(new FeatureCollection(gis.GetBars(centerLat, centerLon, radius).Select(bar => GeoJsonParser.ParseBarToFeature(bar)).ToList()));
 		}
 
 		[HttpPost("[action]")]
@@ -44,24 +41,29 @@ namespace PDT.Controllers
 		[HttpGet("[action]")]
 		public ActionResult<IEnumerable<FeatureCollection>> GetParks(double centerLat, double centerLon, double radius)
 		{
-			var features = new List<Feature>().AddAndParseRange(gis.GetParks(centerLat, centerLon, radius), GeoJsonParser.ParseParkToFeature);
-			return Ok(new FeatureCollection(features));
+			return Ok(new FeatureCollection(gis.GetParks(centerLat, centerLon, radius).Select(park => GeoJsonParser.ParseParkToFeature(park)).ToList()));
 		}
 
 		[HttpPost("[action]")]
 		public ActionResult<IEnumerable<FeatureCollection>> GetParks([FromBody] string[] cityParts)
 		{
-			var features = new List<Feature>().AddAndParseRange(gis.GetParks(cityParts), GeoJsonParser.ParseParkToFeature);
-			return Ok(new FeatureCollection(features));			
+			return Ok(new FeatureCollection(gis.GetParks(cityParts).Select(park => GeoJsonParser.ParseParkToFeature(park)).ToList()));
 		}
 
 		[HttpPost("[action]")]
-		public ActionResult<IEnumerable<FeatureCollection>> GetNearbyShops(int parkId, double radius, [FromBody] string[] cityParts)
+		public ActionResult<IEnumerable<FeatureCollection>> GetNearbyShops(int parkId, double shopRadius, double radius, double centerLat, double centerLon, [FromBody] string[] cityParts)
 		{
-			var features = gis.GetNearbyShops(parkId, radius).Select(shop => GeoJsonParser.ParseShopToFeature(shop)).ToList();
-			features.AddAndParseRange(gis.GetParks(cityParts), GeoJsonParser.ParseParkToFeature);
+			var features = gis.GetNearbyShops(parkId, shopRadius).Select(shop => GeoJsonParser.ParseShopToFeature(shop)).ToList();
+			if (cityParts == null || cityParts.Length == 0)
+			{
+				features.AddRange(gis.GetParks(centerLat, centerLon, radius).Select(park => GeoJsonParser.ParseParkToFeature(park)).ToList());
+			}
+			else
+			{
+				features.AddRange(gis.GetParks(cityParts).Select(park => GeoJsonParser.ParseParkToFeature(park)).ToList());
+			}
 
-			return Ok(new FeatureCollection(features));;
+			return Ok(new FeatureCollection(features));
 		}
 
 		[HttpGet("[action]")]
@@ -83,4 +85,3 @@ namespace PDT.Controllers
 		}
 	}
 }
- 

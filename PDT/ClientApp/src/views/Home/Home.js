@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
-import { Map, TileLayer, Marker, Popup, Tooltip, Polygon, Polyline, GeoJSON } from 'react-leaflet';
+import { Map, TileLayer, Marker, Tooltip, GeoJSON } from 'react-leaflet';
+import { TabContent, TabPane, Nav, NavItem, NavLink, Button, Row, Col, Input, Label, FormGroup } from 'reactstrap';
+import classnames from 'classnames';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Select from 'react-select';
 import hash from 'object-hash';
-
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -15,17 +16,39 @@ L.Icon.Default.mergeOptions({
 let LeafletIcon = L.Icon.extend({
 	options: {
 		iconSize: [30, 47],
-		iconAnchor: [16, 46],
+		iconAnchor: [15, 47],
+		popupAnchor: [0, -47],
+		tooltipAnchor: [0, -47]
+	}
+});
+
+let ShopIcon = L.Icon.extend({
+	options: {
+		iconSize: [45, 45],
+		iconAnchor: [22, 45],
 		popupAnchor: [0, -45],
 		tooltipAnchor: [0, -45]
 	}
 });
 
-const shopMarker = new LeafletIcon({
+const alcoholMarker = new ShopIcon({
+	iconUrl: require('../../icons/AlcoholIcon.png')
+});
+const wineMarker = new ShopIcon({
+	iconUrl: require('../../icons/WineIcon.png')
+});
+const coffeeMarker = new ShopIcon({
+	iconUrl: require('../../icons/TobaccoIcon.png')
+});
+const shopMarker = new ShopIcon({
 	iconUrl: require('../../icons/ShopIcon.png')
 });
 
-const barMarker = new LeafletIcon({
+const barMarker = new ShopIcon({
+	iconUrl: require('../../icons/BarIcon.png')
+});
+
+const pubMarker = new ShopIcon({
 	iconUrl: require('../../icons/PubIcon.png')
 });
 
@@ -42,17 +65,15 @@ export default class Home extends Component {
 			lat: 48.148598,
 			lon: 17.107748,
 			zoom: 13,
-			bars: [],
 			radius: 5000,
 			shopRadius: 500,
-			parkAreas: [],
 			cityParts: [],
 			cityPartsSelected: [],
 			nearbyShops: [],
 			streets: [],
 			streetsSelected: [],
-			streetsOnMap: [],
-			mapEntities: []
+			mapEntities: [],
+			activeTab: "1"
 		};
 		this.getMyLocation = this.getMyLocation.bind(this);
 		this.selectCityPart = this.selectCityPart.bind(this);
@@ -65,16 +86,17 @@ export default class Home extends Component {
 		this.selectStreet = this.selectStreet.bind(this);
 		this.getBarsInCityParts = this.getBarsInCityParts.bind(this);
 		this.getParksInCityPart = this.getParksInCityPart.bind(this);
+		this.getNearbyParks = this.getNearbyParks.bind(this);
 		this.getBarsOnStreet = this.getStreetsWithBars.bind(this);
 		this.getStreetsWithBars = this.getStreetsWithBars.bind(this);
 		this.pointToLayer = this.pointToLayer.bind(this);
 		this.onEachFeature = this.onEachFeature.bind(this);
 		this.style = this.style.bind(this);
+		this.toggle = this.toggle.bind(this);
 	}
 
 	componentDidMount() {
 		this.getCityParts();
-		this.getNearbyStreetsInRadius();
 	}
 
 	getMyLocation() {
@@ -208,6 +230,19 @@ export default class Home extends Component {
 			});
 	}
 
+	getNearbyParks() {
+		fetch(`api/Bars/GetParks?centerLat=${this.state.lat}&centerLon=${this.state.lon}&radius=${this.state.radius}`)
+			.then(response => response.json())
+			.then(response => {
+				this.setState({
+					...this.state,
+					mapEntities: response
+				});
+			}, error => {
+				console.log(error);
+			});
+	}
+
 	selectStreet(e) {
 		this.setState({ ...this.state, streetsSelected: e });
 	}
@@ -235,7 +270,7 @@ export default class Home extends Component {
 	}
 
 	getNearbyShops(id) {
-		fetch(`api/Bars/GetNearbyShops?parkId=${id}&radius=${this.state.shopRadius}`,
+		fetch(`api/Bars/GetNearbyShops?parkId=${id}&shopRadius=${this.state.shopRadius}&centerLat=${this.state.lat}&centerLon=${this.state.lon}&radius=${this.state.radius}`,
 			{
 				method: 'POST',
 				body: JSON.stringify( this.state.cityPartsSelected.map((p) => { return p.value })),
@@ -271,14 +306,41 @@ export default class Home extends Component {
 		if (feature.geometry.type === "Point")
 		{
 			if (feature.properties.hasOwnProperty("ShopType")) {
+				if (feature.properties.ShopType === "alcohol") {
+					return L.marker(featureLayer, {
+						icon: alcoholMarker,
+						...feature.properties
+					}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.ShopType)
+
+				}
+				else if (feature.properties.ShopType === "wine") {
+					return L.marker(featureLayer, {
+						icon: wineMarker,
+						...feature.properties
+					}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.ShopType)
+
+				}
+				else if (feature.properties.ShopType === "tobacco" || feature.properties.ShopType === "coffee") {
+					return L.marker(featureLayer, {
+						icon: coffeeMarker,
+						...feature.properties
+					}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.ShopType)
+
+				}
 				return L.marker(featureLayer, {
 					icon: shopMarker,
 					...feature.properties
 				}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.ShopType)
 			}
 			else if (feature.properties.hasOwnProperty("BarType")) {
+				if (feature.properties.BarType === "bar") {
+					return L.marker(featureLayer, {
+						icon: barMarker,
+						...feature.properties
+					}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.BarType)
+				}
 				return L.marker(featureLayer, {
-					icon: barMarker,
+					icon: pubMarker,
 					...feature.properties
 				}).bindPopup(feature.properties.Name + "<br/>" + feature.properties.BarType)
 			}
@@ -319,6 +381,22 @@ export default class Home extends Component {
 				}
 			}
 		}
+		else if (feature.geometry.type == "LineString") {
+			return {
+				weight: 4,
+				opacity: 1,
+				color: 'green',
+			}
+		}
+	}
+
+	toggle(tab) {
+		if (this.state.activeTab !== tab) {
+			this.setState({
+				...this.state,
+				activeTab: tab
+			});
+		}
 	}
 
 	render() {
@@ -326,20 +404,7 @@ export default class Home extends Component {
 		const position = [this.state.lat, this.state.lon];
 
 		return (
-			<div>
-				<label>Choose city districts:</label>
-				<Select value={this.state.cityPartsSelected} options={this.state.cityParts} onChange={this.selectCityPart} isMulti placeholder="Choose city districts: e.g. Rača" />
-				<label>Choose streets:</label>
-				<Select value={this.state.streetsSelected} options={this.state.streets} onChange={this.selectStreet} isMulti placeholder="Choose streets: e.g. Obchodná" />
-				<button onClick={this.getMyLocation}>GetGeolocation</button>
-				<button onClick={this.getNearbyBarsInRadius}>Get nearby bars in radius</button>
-				<button onClick={this.getBarsInCityParts}>Get bars in selected city districts</button>
-				<button onClick={this.getParksInCityPart}>Get parks in selected city districts</button>
-				<button onClick={this.getStreetsWithBars}>Get bars on selected streets</button>
-				<label>Choose desired distance for nearby bars:</label>
-				<input name="radius" type="number" value={this.state.radius} onChange={this.handleInputChange} />
-				<label>Choose desired distance between parks and shops:</label>
-				<input name="shopRadius" type="number" value={this.state.shopRadius} onChange={this.handleInputChange} />
+			<div>				
 				<Map center={position} zoom={this.state.zoom}>
 					<TileLayer
 						attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
@@ -348,9 +413,78 @@ export default class Home extends Component {
 					<Marker position={position} icon={userMarker}>
 						<Tooltip direction={"top"} permanent>Your location</Tooltip>
 					</Marker>
-					<GeoJSON key={hash(this.state.mapEntities)} data={this.state.mapEntities} onEachFeature={this.onEachFeature} pointToLayer={this.pointToLayer} style={this.style}>
-					</GeoJSON>
+					<GeoJSON key={hash(this.state.mapEntities)} data={this.state.mapEntities} onEachFeature={this.onEachFeature} pointToLayer={this.pointToLayer} style={this.style}></GeoJSON>
 				</Map>
+				<div className="custom-tabs">
+					<Nav tabs>
+						<NavItem>
+							<NavLink
+								className={classnames({ active: this.state.activeTab === '1' })}
+								onClick={() => { this.toggle('1'); }}
+							>
+								Nearby entities
+							</NavLink>
+						</NavItem>
+						<NavItem>
+							<NavLink
+								className={classnames({ active: this.state.activeTab === '2' })}
+								onClick={() => { this.toggle('2'); }}
+							>
+								City districts
+							</NavLink>
+						</NavItem>
+					</Nav>
+					<TabContent activeTab={this.state.activeTab}>
+						<TabPane tabId="1">
+							<Row>
+								<Col sm="12">
+									<FormGroup>
+										<Label>Choose streets:</Label>
+										<Select value={this.state.streetsSelected} options={this.state.streets} onChange={this.selectStreet} isMulti placeholder="Choose streets: e.g. Obchodná" />
+									</FormGroup>
+									<FormGroup>
+										<Label>Choose desired distance for nearby elements:</Label>
+										<Input name="radius" type="number" value={this.state.radius} onChange={this.handleInputChange} />
+									</FormGroup>
+									<FormGroup>
+										<Button onClick={this.getNearbyBarsInRadius} color="primary">Find nearby bars in radius</Button>
+										<Button onClick={this.getNearbyParks} color="primary">Find nearby parks</Button>
+										<Button onClick={this.getNearbyStreetsInRadius} color="primary">Find nearby streets</Button>
+										<Button onClick={this.getStreetsWithBars} color="primary">Find bars on selected streets</Button>
+									</FormGroup>
+								</Col>
+							</Row>
+						</TabPane>
+						<TabPane tabId="2">
+							<Row>
+								<Col sm="12">
+									<Row>
+										<Col sm="6">
+											<FormGroup>
+												<Label>Choose city districts:</Label>
+												<Select value={this.state.cityPartsSelected} options={this.state.cityParts} onChange={this.selectCityPart} isMulti placeholder="Choose city districts: e.g. Rača" />
+											</FormGroup>
+										</Col>
+										<Col sm="6">
+											<FormGroup>
+												<Label>Choose streets:</Label>
+												<Select value={this.state.streetsSelected} options={this.state.streets} onChange={this.selectStreet} isMulti placeholder="Choose streets: e.g. Obchodná" />
+											</FormGroup>
+										</Col>
+									</Row>
+									<FormGroup>
+										<Label>Choose desired distance between parks and shops:</Label>
+										<Input name="shopRadius" type="number" value={this.state.shopRadius} onChange={this.handleInputChange} />
+									</FormGroup>
+									<Button onClick={this.getMyLocation} color="primary">Get current geolocation</Button>
+									<Button onClick={this.getBarsInCityParts} color="primary">Find bars in selected city districts</Button>
+									<Button onClick={this.getParksInCityPart} color="primary">Find parks in selected city districts</Button>
+									<Button onClick={this.getStreetsWithBars} color="primary">Find bars on selected streets</Button>
+								</Col>
+							</Row>
+						</TabPane>
+					</TabContent>
+				</div>
 			</div>
 		)
 	}

@@ -25,13 +25,54 @@ header {
 }
 
 main {
-  padding: 10px;
+    .leaflet-container {
+        height: 60vh;
+        width: 100%;
+        margin: 0 auto;
+    }
 
-  .leaflet-container {
-    height: 800px;
-    width: 80%;
-    margin: 0 auto;
-  }
+    .custom-tabs {
+        margin-top: 20px;
+
+        .nav-tabs {
+            justify-content: center;
+
+            li a {
+                background-color: #007bff;
+                border-color: #007bff;
+                color: white
+            }
+
+            li .nav-link.active {
+                background-color: #0069DD;
+                border-color: #0069DD;
+                color: white
+            }
+
+            li .nav-link:hover {
+                background-color: #0069DD;
+                border-color: #0069DD;
+                color: white
+            }
+        }
+
+        .tab-content {
+            text-align: center;
+
+            .tab-pane {
+                padding: 10px;
+            }
+        }
+
+        input {
+            max-width: 250px;
+            margin: auto;
+        }
+
+        button {
+            margin: 10px;
+        }
+    }
 }
 
 footer {
