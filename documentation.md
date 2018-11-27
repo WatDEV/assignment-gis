@@ -1,3 +1,5 @@
+# Made by: Matúš Buzássy
+
 # Overview
 
 This application shows parks, bars, different shop in Bratislava on a map. Most important features are:

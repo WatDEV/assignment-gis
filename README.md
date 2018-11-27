@@ -18,10 +18,39 @@ Build a map-based application, which lets the user see geo-based data on a map a
 
 ## My project
 
+Made by: Matúš Buzássy
+
 Fill in (either in English, or in Slovak):
 
-**Application description**: `<fill in>`
+**Application description**: 
 
-**Data source**: `<fill in>`
+Web application written in C# on backend and React.js on frontend. BE is exposed via REST API that outputs GeoJSON feature collections. Data are retrieved from PostGis database. On Frontend a Leaflet.js is used for displaying map data. Frontend displays information about bars, pubs, shops, parks and user location. 
 
-**Technologies used**: `<fill in>`
+Three base scenarios handled by this application:
+1. Searching for bars and pubs in radius or in selected city district
+2. Searching for parks in radius or city district
+	2a. Searching for shops in close proximity of a park (shops that can be found: tobacco, alcohol, wine stores or supermarkets)
+3. Searching for bars and pubs on selected streets in radius or in city district
+
+**Data source**: 
+
+- [Open Street Maps](https://www.openstreetmap.org/)
+
+**Technologies used**: 
+
+Frontend
+- React.js
+- Leaflet.js
+
+Backend
+- C# 
+- ASP.NET Core (Web server shell)
+- PostGIS (Database)
+- EntityFramework Core(Database orm on c# side)
+- NetTopologySuite (Nuget for transforming post gis functions for entity framework)
+- GeoJSON.Net (GeoJSON parser)
+
+
+
+
+
