@@ -19,7 +19,7 @@ namespace PDT.Services
 		}
 		public IEnumerable<string> GetCityParts()
 		{
-			return db.PlanetOsmPolygon.Where(p => string.IsNullOrEmpty(p.Name) && !p.Name.Equals("Ahoj")  && p.Boundary == "administrative")
+			return db.PlanetOsmPolygon.Where(p => !string.IsNullOrEmpty(p.Name) && !p.Name.Equals("Ahoj")  && p.Boundary == "administrative")
 				.Select(x => x.Name)
 				.Distinct()
 				.ToList();

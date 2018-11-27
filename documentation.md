@@ -1,23 +1,20 @@
-*This is a documentation for a fictional project, just to show you what I expect. Notice a few key properties:*
-- *no cover page, really*
-- *no copy&pasted assignment text*
-- *no code samples*
-- *concise, to the point, gets me a quick overview of what was done and how*
-- *I don't really care about the document length*
-- *I used links where appropriate*
-
 # Overview
 
 This application shows parks, bars, different shop in Bratislava on a map. Most important features are:
-- searching for bars, pubs and parks in radius you users location 
-- selection of desired city district
-- searching for bars, pubs and parks in selected city districts
-- searching for shops near parks (alcohol, wine, tobacco, coffee and supermarkets and each one of them has special icon)
-- searching for bars on selected streets
+1. Searching for bars and pubs in radius or in selected city district
+2. Searching for parks in radius or city district
+	2a. Searching for shops in close proximity of a park (shops that can be found: tobacco, alcohol, wine stores or supermarkets)
+3. Searching for bars and pubs on selected streets in radius or in city district
 
-This is it in action:
 
-![Screenshot](ParksInRadiusWithNearbyShopsSS.png)
+Output of selecting a park to find it nearest shops:
+	![Screenshot](ParksInRadiusWithNearbyShopsSS.png)
+		
+Output of looking for bars in radius:
+	![Screenshot](BarsAndPubsInNearbyRadiusSS.png)
+	
+Output of looking for bars on selected streets:
+	![Screenshot](SelectedStreetsInRadiusWithBarsOnThemSS.png)
 
 The application has 2 separate parts, the client which is a [react application](#frontend) using leaflet API the [backend application](#backend) written in C# in ASP.NET using EntityFramework with NetTopologySuite to interact with PostGis database.  The frontend application communicates with backend using a [REST API](#api).
 
@@ -51,88 +48,99 @@ All GeoJSON API function return feature collection which is to be used on fronte
 `GET /api/Bars/GetBars?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query: 
+```sql
 SELECT bar.name, CAST(bar.id AS integer) AS "Id", ST_X(bar.way), ST_Y(bar.way), bar.amenity AS "BarType"
 FROM planet_osm_point AS bar
 WHERE bar.amenity IN ('bar', 'pub') AND (ST_Distance(bar.way, @__centerPoint_0) < @__radius_1)
-
+```
 **Find Bars in city districts**
 `POST /api/Bars/GetBars`
 Body: serialized json of array with names of city districts
 
 Example query:
+```sql
 SELECT bar.name, CAST(bar.id AS integer) AS "Id", ST_X(bar.way), ST_Y(bar.way), bar.amenity AS "BarType"
 FROM planet_osm_point AS bar
 CROSS JOIN planet_osm_polygon AS "cityPart"
 WHERE (bar.amenity IN ('bar', 'pub') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (ST_Contains("cityPart".way, bar.way) = TRUE)
-
+```
 **Find streets and their bars in city districts**
 `POST /api/Bars/GetStreetsWithBars`
 Body: serialized json of array with names of city districts
 
 Example query: 
+```sql
 SELECT bar.name, CAST(bar.id AS integer) AS "Id", ST_X(bar.way), ST_Y(bar.way), bar.amenity AS "BarType"
 FROM planet_osm_point AS bar
 CROSS JOIN planet_osm_line AS street
 WHERE (bar.amenity IN ('bar', 'pub') AND street.name IN ('Alžbetínska', 'Andreja Plávku', 'Americké námestie')) AND (ST_Distance(street.way, bar.way) <= 25)
-
+```
 **Find parks in radius of coordinates**
 `GET /api/Bars/GetParks?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query:
+```sql
 SELECT park.name, CAST(park.id AS integer) AS "Id", park.way, TRUE AS "HasBenches", park.id
 FROM planet_osm_polygon AS park
 CROSS JOIN planet_osm_point AS bench
 WHERE (((park.leisure = 'park') AND (ST_Distance(park.way, @__centerPoint_0) < @__radius_1)) AND (bench.amenity = 'bench')) AND (ST_Contains(park.way, bench.way) = TRUE)
 ORDER BY CAST(park.id AS integer)
-
+```
 **Find parks in city districts**
 `POST /api/Bars/GetParks`
 Body: serialized json of array with names of city districts
 
 Example query:
-SELECT park.name, CAST(park.id AS integer) AS "Id", park.way
+```sql
+SELECT park.name, CAST(park.id AS integer) AS "Id", park.way, TRUE AS "HasBenches", park.id
 FROM planet_osm_polygon AS park
 CROSS JOIN planet_osm_polygon AS "cityPart"
-WHERE ((park.leisure = 'park') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (ST_Within(park.way, "cityPart".way) = TRUE)
-
+CROSS JOIN planet_osm_point AS bench
+WHERE ((((park.leisure = 'park') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (bench.amenity = 'bench')) AND (ST_Within(park.way, "cityPart".way) = TRUE)) AND (ST_Contains(park.way, bench.way) = TRUE)
+ORDER BY CAST(park.id AS integer)
+```
 **Find Shops in radius of park**
 `POST /api/Bars/GetNearbyShops?centerLat=48.148598&centerLon=17.107748&radius=1000&shopRadius=$000&parkId=10`
 Body: serialized json of array with names of city districts
 
 Example query:
+```sql
 SELECT shop.name, CAST(shop.id AS integer) AS "Id", ST_X(shop.way), ST_Y(shop.way), shop.shop AS "ShopType"
 FROM planet_osm_polygon AS park
 CROSS JOIN planet_osm_point AS shop
 WHERE ((park.id = @__parkId_0) AND shop.shop IN ('alcohol', 'wine', 'supermarket', 'tobacco', 'coffe')) AND (ST_Distance(shop.way, park.way) < @__radius_1)
-
+```
 **Find streets in radius of coordinates**
 `GET /api/Bars/GetNearbyStreets?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query:
+```sql
 SELECT DISTINCT street.name
 FROM planet_osm_line AS street
 WHERE (street.name IS NOT NULL AND street.highway IS NOT NULL) AND (ST_Distance(street.way, @__centerPoint_0) < @__radius_1)
 ORDER BY street.name
-
+```
 **Find streets in city parts**
 `POST /api/Bars/GetStreetsInCityParts`
 Body: serialized json of array with names of city districts
 
 Example query:
+```sql
 SELECT DISTINCT street.name
 FROM planet_osm_line AS street
 CROSS JOIN planet_osm_polygon AS "cityPart"
 WHERE ((street.name IS NOT NULL AND street.highway IS NOT NULL) AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (ST_Intersects(street.way, "cityPart".way) = TRUE)
 ORDER BY street.name
-
+```
 **Retrieves all city districts**
 `GET /api/Bars/GetCityParts
 
 Example query:
+```sql
 SELECT DISTINCT p.name
 FROM planet_osm_polygon AS p
 WHERE ((p.name IS NULL OR (p.name = '')) AND ((p.name <> 'Ahoj') OR p.name IS NULL)) AND (p.boundary = 'administrative')
-
+```
 ### Response
 
-All API calls except GetNearbyStreets, GetStreetsInCityParts, GetCityParts (which returns list of strings) return geoJSON. 
+All API calls except GetNearbyStreets, GetStreetsInCityParts, GetCityParts (which returns list of strings) return geoJSON feature collection. 
