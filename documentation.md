@@ -44,7 +44,7 @@ All GeoJSON API function return feature collection which is to be used on fronte
 
 ## Api
 
-**Find Bars in radius of coordinates**
+**Find Bars in radius of coordinates, used in scenario 1**
 `GET /api/Bars/GetBars?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query: 
@@ -53,7 +53,7 @@ SELECT bar.name, CAST(bar.id AS integer) AS "Id", ST_X(bar.way), ST_Y(bar.way), 
 FROM planet_osm_point AS bar
 WHERE bar.amenity IN ('bar', 'pub') AND (ST_Distance(bar.way, @__centerPoint_0) < @__radius_1)
 ```
-**Find Bars in city districts**
+**Find Bars in city districts, used in scenario 1**
 `POST /api/Bars/GetBars`
 Body: serialized json of array with names of city districts
 
@@ -64,7 +64,7 @@ FROM planet_osm_point AS bar
 CROSS JOIN planet_osm_polygon AS "cityPart"
 WHERE (bar.amenity IN ('bar', 'pub') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (ST_Contains("cityPart".way, bar.way) = TRUE)
 ```
-**Find streets and their bars in city districts**
+**Find streets and their bars in city districts, used in scenario 3**
 `POST /api/Bars/GetStreetsWithBars`
 Body: serialized json of array with names of city districts
 
@@ -75,7 +75,7 @@ FROM planet_osm_point AS bar
 CROSS JOIN planet_osm_line AS street
 WHERE (bar.amenity IN ('bar', 'pub') AND street.name IN ('Alžbetínska', 'Andreja Plávku', 'Americké námestie')) AND (ST_Distance(street.way, bar.way) <= 25)
 ```
-**Find parks in radius of coordinates**
+**Find parks in radius of coordinates, used in scenario 2**
 `GET /api/Bars/GetParks?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query:
@@ -86,7 +86,7 @@ CROSS JOIN planet_osm_point AS bench
 WHERE (((park.leisure = 'park') AND (ST_Distance(park.way, @__centerPoint_0) < @__radius_1)) AND (bench.amenity = 'bench')) AND (ST_Contains(park.way, bench.way) = TRUE)
 ORDER BY CAST(park.id AS integer)
 ```
-**Find parks in city districts**
+**Find parks in city districts, used in scenario 2**
 `POST /api/Bars/GetParks`
 Body: serialized json of array with names of city districts
 
@@ -99,7 +99,7 @@ CROSS JOIN planet_osm_point AS bench
 WHERE ((((park.leisure = 'park') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (bench.amenity = 'bench')) AND (ST_Within(park.way, "cityPart".way) = TRUE)) AND (ST_Contains(park.way, bench.way) = TRUE)
 ORDER BY CAST(park.id AS integer)
 ```
-**Find Shops in radius of park**
+**Find Shops in radius of park, used in scenario 2**
 `POST /api/Bars/GetNearbyShops?centerLat=48.148598&centerLon=17.107748&radius=1000&shopRadius=$000&parkId=10`
 Body: serialized json of array with names of city districts
 
@@ -110,7 +110,7 @@ FROM planet_osm_polygon AS park
 CROSS JOIN planet_osm_point AS shop
 WHERE ((park.id = @__parkId_0) AND shop.shop IN ('alcohol', 'wine', 'supermarket', 'tobacco', 'coffe')) AND (ST_Distance(shop.way, park.way) < @__radius_1)
 ```
-**Find streets in radius of coordinates**
+**Find streets in radius of coordinates, used in scenario 3**
 `GET /api/Bars/GetNearbyStreets?centerLat=48.148598&centerLon=17.107748&radius=1000`
 
 Example query:
@@ -120,7 +120,7 @@ FROM planet_osm_line AS street
 WHERE (street.name IS NOT NULL AND street.highway IS NOT NULL) AND (ST_Distance(street.way, @__centerPoint_0) < @__radius_1)
 ORDER BY street.name
 ```
-**Find streets in city parts**
+**Find streets in city parts, used in scenario 3**
 `POST /api/Bars/GetStreetsInCityParts`
 Body: serialized json of array with names of city districts
 
@@ -132,7 +132,7 @@ CROSS JOIN planet_osm_polygon AS "cityPart"
 WHERE ((street.name IS NOT NULL AND street.highway IS NOT NULL) AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (ST_Intersects(street.way, "cityPart".way) = TRUE)
 ORDER BY street.name
 ```
-**Retrieves all city districts**
+**Retrieves all city districts, used in scenario 1,2,3**
 `GET /api/Bars/GetCityParts
 
 Example query:
