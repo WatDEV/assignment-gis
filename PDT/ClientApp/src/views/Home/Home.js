@@ -6,6 +6,9 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Select from 'react-select';
 import hash from 'object-hash';
+import StreetMapboxLayer from './StreetMapboxLayer';
+import SateliteMapboxLayer from './SateliteMapboxLayer';
+
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -73,7 +76,8 @@ export default class Home extends Component {
 			streets: [],
 			streetsSelected: [],
 			mapEntities: [],
-			activeTab: "1"
+			activeTab: "1",
+			isStreetView: true
 		};
 		this.getMyLocation = this.getMyLocation.bind(this);
 		this.selectCityPart = this.selectCityPart.bind(this);
@@ -404,11 +408,13 @@ export default class Home extends Component {
 		const position = [this.state.lat, this.state.lon];
 
 		return (
-			<div>				
-				<Map center={position} zoom={this.state.zoom}>
+			<div>
+				<Map center={position} zoom={this.state.zoom} ref={(map) => { this.state.mapRef = map; }}>
+					{this.state.isStreetView && <StreetMapboxLayer />}
+					{!this.state.isStreetView && <SateliteMapboxLayer />}					
 					<TileLayer
 						attribution="&amp;copy <a href=&quot;http://osm.org/copyright&quot;>OpenStreetMap</a> contributors"
-						url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+						url=""
 					/>
 					<Marker position={position} icon={userMarker}>
 						<Tooltip direction={"top"} permanent>Your location</Tooltip>
@@ -447,6 +453,11 @@ export default class Home extends Component {
 										<Input name="radius" type="number" value={this.state.radius} onChange={this.handleInputChange} />
 									</FormGroup>
 									<FormGroup>
+										<Label for="streetView1">Display street view: </Label>
+										<Input id="streetView1" type="checkbox" name="isStreetView" checked={this.state.isStreetView} onChange={this.handleInputChange}
+										/>
+									</FormGroup>
+									<FormGroup>
 										<Button onClick={this.getNearbyBarsInRadius} color="primary">Find nearby bars in radius</Button>
 										<Button onClick={this.getNearbyParks} color="primary">Find nearby parks</Button>
 										<Button onClick={this.getNearbyStreetsInRadius} color="primary">Find nearby streets</Button>
@@ -475,6 +486,11 @@ export default class Home extends Component {
 									<FormGroup>
 										<Label>Choose desired distance between parks and shops:</Label>
 										<Input name="shopRadius" type="number" value={this.state.shopRadius} onChange={this.handleInputChange} />
+									</FormGroup>
+									<FormGroup>
+										<Label for="streetView2">Display street view: </Label>
+										<Input id="streetView2" type="checkbox" name="isStreetView" checked={this.state.isStreetView} onChange={this.handleInputChange}
+										/>
 									</FormGroup>
 									<Button onClick={this.getMyLocation} color="primary">Get current geolocation</Button>
 									<Button onClick={this.getBarsInCityParts} color="primary">Find bars in selected city districts</Button>
