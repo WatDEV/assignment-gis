@@ -16,7 +16,7 @@ StreetMapboxLayer.propTypes = {
 
 StreetMapboxLayer.defaultProps = {
 	accessToken: "pk.eyJ1IjoiYnV6YXNzeSIsImEiOiJjanA5Zzk3Z3UwN3UzM3FwbHJ3ZnN3aDlnIn0.jg2ByjvaE1MP9ujMmCHuYw",
-	style: "mapbox://styles/buzassy/cjp9gm0050x5i2snv6i3ltq4v"
+	style: "mapbox://styles/buzassy/cjp9wbfbz642f2sqjruohnkmx"
 };
 
 export default withLeaflet(StreetMapboxLayer); 
