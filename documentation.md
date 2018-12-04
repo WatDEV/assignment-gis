@@ -24,6 +24,8 @@ The application has 2 separate parts, the client which is a [react application](
 
 The fronted application is SPA written in React. It communicates with backend rest API using native function "fetch". The map is displayed using react component based Leaflet technology. Geographic information is displayed in GeoJSON format on Leaflet map. 
 
+Leaflet also uses Mapbox custom layers. Thanks to this it is possible to switch satellite and street view.
+
 Each of the point properties has its own icon (user location, bar, pub, supermarket, tobacco shop, wine shop and alcohol store). Parks are shown as polygon in two different colours. Red for parks without benches and blue for parks with benches. Selected streets are show in single color(green).
 
 Most of the relevant frontend code is located in Home.js along with some styling in App.scss and general layout in DefaultLayout.cs. Icons are stored in Icons folder.
