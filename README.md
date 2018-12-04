@@ -41,7 +41,7 @@ Three base scenarios handled by this application:
 Frontend
 - React.js
 - Leaflet.js
-- Mapbox
+- Mapbox.js
 
 Backend
 - C# 

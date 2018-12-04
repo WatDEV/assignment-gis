@@ -22,9 +22,9 @@ The application has 2 separate parts, the client which is a [react application](
 
 # Frontend
 
-The fronted application is SPA written in React. It communicates with backend rest API using native function "fetch". The map is displayed using react component based Leaflet technology. Geographic information is displayed in GeoJSON format on Leaflet map. 
+The fronted application is SPA written in React Redux. It communicates with backend rest API using native function "fetch". The map is displayed using react component based Leaflet technology. Geographic information is displayed in GeoJSON format on Leaflet map. 
 
-Leaflet also uses Mapbox custom layers. Thanks to this it is possible to switch satellite and street view.
+Leaflet also uses Mapbox custom layers. Thanks to this it is possible to switch between satellite and street view.
 
 Each of the point properties has its own icon (user location, bar, pub, supermarket, tobacco shop, wine shop and alcohol store). Parks are shown as polygon in two different colours. Red for parks without benches and blue for parks with benches. Selected streets are show in single color(green).
 
@@ -36,7 +36,7 @@ Logic in frontend is very simple, its only responsibilites are
 
 # Backend
 
-The backend as previously mentioned is written in C#. Server uses ASP.NET framework to set up and start server. To communicate with database it uses EntityFramework along with NetTopologySouite to translate ST_ functions. For parsing geoJSONS GeoJSON.Net nuget package has been used.
+The backend as previously mentioned is written in C#. Server uses ASP.NET framework to set up and start server. To communicate with database it uses EntityFramework along with NetTopologySouite to translate C# LINQ expressions to SQL language with ST_ functions. However one particular ST_ sunction was not supported (ST_Transform) and has to be reimplemented loacally to translate coordinates to proper form. Application uses GeoJSON format in its REST API. For parsing data into geoJSONS GeoJSON.Net nuget package has been used.
 
 ## Data
 
@@ -103,6 +103,28 @@ CROSS JOIN planet_osm_point AS bench
 WHERE ((((park.leisure = 'park') AND "cityPart".name IN ('Bratislava - mestská časť Staré Mesto')) AND (bench.amenity = 'bench')) AND (ST_Within(park.way, "cityPart".way) = TRUE)) AND (ST_Contains(park.way, bench.way) = TRUE)
 ORDER BY CAST(park.id AS integer)
 ```
+
+Query in LINQ expression:
+```csharp
+parksWithBenches = (from park in db.PlanetOsmPolygon where park.Leisure == "park"
+					from cityPart in db.PlanetOsmPolygon where cityParts.Contains(cityPart.Name)
+					from bench in db.PlanetOsmPoint where bench.Amenity == "bench"
+					where park.Way.Within(cityPart.Way)
+					where park.Way.Contains(bench.Way)
+					select new ParkDto
+					{
+						Name = park.Name,
+						Id = Convert.ToInt32(park.Id),
+						Location = park.Way.Boundary.Coordinates.Select(y => new double[]
+						{
+									TransformationUtils.ParseLongtitudeToNormalFormat(y.X),
+									TransformationUtils.ParseLattitudeToNormalFormat(y.Y)
+						}).ToList(),
+						HasBenches = true
+					}).GroupBy(x => x.Id).Select(x => x.FirstOrDefault()).ToList();
+```
+
+
 **Find Shops in radius of park, used in scenario 2**
 `POST /api/Bars/GetNearbyShops?centerLat=48.148598&centerLon=17.107748&radius=1000&shopRadius=$000&parkId=10`
 Body: serialized json of array with names of city districts
@@ -137,7 +159,7 @@ WHERE ((street.name IS NOT NULL AND street.highway IS NOT NULL) AND "cityPart".n
 ORDER BY street.name
 ```
 **Retrieves all city districts, used in scenario 1,2,3**
-`GET /api/Bars/GetCityParts
+`GET /api/Bars/GetCityParts`
 
 Example query:
 ```sql
@@ -148,3 +170,22 @@ WHERE ((p.name IS NULL OR (p.name = '')) AND ((p.name <> 'Ahoj') OR p.name IS NU
 ### Response
 
 All API calls except GetNearbyStreets, GetStreetsInCityParts, GetCityParts (which returns list of strings) return geoJSON feature collection. 
+
+Example:
+```json
+{
+    "type":"Feature",
+    "geometry":{
+        "type":"Point",
+        "coordinates":[
+            17.1077531,
+            48.106358499912204
+        ]
+    },
+    "properties":{
+        "Id":6334,
+        "Name":"Caiman pub",
+        "BarType":"Pub"
+    }
+}
+```
